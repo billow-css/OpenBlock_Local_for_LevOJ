@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>LevOJ 对局可视化分析器 · 修正版</title>
+  <style>
+    :root {
+      --bg: #1a1e2b;
+      --panel-bg: #212635;
+      --text: #e0e5f0;
+      --accent: #5b8cff;
+      --accent-hover: #3d6ceb;
+      --gold: #f0b340;
+      --bomb-border: #ff4757;
+      --wildcard-bg: #f8f8f8;
+      --grid-line: #2e3548;
+      --button-bg: #2d3446;
+      --button-hover: #3a435b;
+      --shadow: 0 8px 24px rgba(0,0,0,0.5);
+      --radius: 14px;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f1219;
+      font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text);
+    }
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #2a3142;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px 24px;
+      background: #191e2a;
+      border-bottom: 1px solid #2a3142;
+      flex-wrap: wrap;
+    }
+    .file-label {
+      background: var(--accent);
+      color: white;
+      padding: 10px 22px;
+      border-radius: 32px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 10px rgba(91,140,255,0.3);
+    }
+    .file-label:hover {
+      background: var(--accent-hover);
+    }
+    #fileInput { display: none; }
+    .seed-info {
+      font-size: 13px;
+      color: #9aa1b4;
+      background: #262d3d;
+      padding: 6px 16px;
+      border-radius: 20px;
+      margin-left: auto;
+    }
+    .main {
+      display: flex;
+      flex: 1;
+      min-height: 520px;
+      flex-wrap: wrap;
+    }
+    .board-container {
+      flex: 2;
+      min-width: 450px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      background: #141823;
+      position: relative;
+    }
+    canvas {
+      border-radius: 12px;
+      background: #1c2130;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.6);
+      display: block;
+    }
+    .panel {
+      flex: 1.2;
+      min-width: 260px;
+      background: var(--panel-bg);
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid #2a3142;
+      overflow-y: auto;
+    }
+    .stat-group {
+      background: #1a1f2b;
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .stat-row:last-child { margin-bottom: 0; }
+    .stat-label { color: #8892aa; }
+    .stat-value { font-weight: 700; color: #f0f2f8; }
+    .stat-value.big { font-size: 28px; color: var(--gold); }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .legend-color.bomb {
+      border: 2px solid var(--bomb-border);
+      position: relative;
+    }
+    .legend-color.bomb::after {
+      content: "💣";
+      font-size: 12px;
+      position: absolute;
+      top: -4px;
+      left: 2px;
+    }
+    .legend-color.wildcard {
+      background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+    }
+    .controls {
+      background: #191e2a;
+      border-top: 1px solid #2a3142;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--button-bg);
+      border: none;
+      color: #d3d9e6;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 28px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    button:hover { background: var(--button-hover); color: white; }
+    button:active { transform: scale(0.97); }
+    button.active { background: var(--accent); color: white; }
+    .speed-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #262d3d;
+      padding: 5px 14px;
+      border-radius: 28px;
+    }
+    .speed-group label { font-size: 13px; color: #b0b9ce; }
+    input[type="range"] { width: 80px; accent-color: var(--accent); }
+    .progress-text {
+      font-size: 13px;
+      background: #1f2533;
+      padding: 4px 14px;
+      border-radius: 20px;
+    }
+    .disabled { opacity: 0.5; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="toolbar">
+    <label for="fileInput" class="file-label">📂 导入对局 JSON</label>
+    <input type="file" id="fileInput" accept=".json,application/json">
+    <div class="seed-info" id="seedDisplay">种子：—</div>
+  </div>
+
+  <div class="main">
+    <div class="board-container" id="boardContainer">
+      <canvas id="boardCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="stat-group">
+        <div class="stat-row"><span class="stat-label">🎯 关卡</span><span class="stat-value" id="levelDisplay">—</span></div>
+        <div class="stat-row"><span class="stat-label">📊 当前步数</span><span class="stat-value" id="stepDisplay">—</span></div>
+        <div class="stat-row"><span class="stat-label">⚡ 本步得分</span><span class="stat-value" id="stepScoreDisplay">—</span></div>
+        <div class="stat-row"><span class="stat-label">🏆 关卡累计</span><span class="stat-value big" id="levelCumulativeDisplay">—</span></div>
+        <div class="stat-row"><span class="stat-label">🌟 全局累计</span><span class="stat-value big" id="globalCumulativeDisplay">—</span></div>
+      </div>
+      <div class="stat-group">
+        <div class="stat-label" style="margin-bottom:10px;">📌 图例</div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color" style="background:#e5534b;"></span> 1</div>
+          <div class="legend-item"><span class="legend-color" style="background:#58a6ff;"></span> 2</div>
+          <div class="legend-item"><span class="legend-color" style="background:#3fb950;"></span> 3</div>
+          <div class="legend-item"><span class="legend-color" style="background:#d2a825;"></span> 4</div>
+          <div class="legend-item"><span class="legend-color" style="background:#bc8cff;"></span> 5</div>
+          <div class="legend-item"><span class="legend-color wildcard"></span> 万能0</div>
+          <div class="legend-item"><span class="legend-color bomb"></span> 炸弹</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn">⏮ 上一步</button>
+    <button id="playBtn">▶ 播放</button>
+    <button id="pauseBtn" class="disabled">⏸ 暂停</button>
+    <button id="nextBtn">下一步 ⏭</button>
+    <div class="speed-group">
+      <label>🐢 速度</label>
+      <input type="range" id="speedSlider" min="0.4" max="3.0" value="1.0" step="0.1">
+      <span id="speedValue">1.0x</span>
+    </div>
+    <span class="progress-text" id="progressText">—/—</span>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const COLORS = {
+      1: '#e5534b', 2: '#58a6ff', 3: '#3fb950', 4: '#d2a825', 5: '#bc8cff',
+      bombBorder: '#ff4757', pathStroke: '#f0b340', gridBg: '#1c2130'
+    };
+
+    const fileInput = document.getElementById('fileInput');
+    const seedDisplay = document.getElementById('seedDisplay');
+    const canvas = document.getElementById('boardCanvas');
+    const ctx = canvas.getContext('2d');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const stepDisplay = document.getElementById('stepDisplay');
+    const stepScoreDisplay = document.getElementById('stepScoreDisplay');
+    const levelCumulativeDisplay = document.getElementById('levelCumulativeDisplay');
+    const globalCumulativeDisplay = document.getElementById('globalCumulativeDisplay');
+    const progressText = document.getElementById('progressText');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    let gameData = null;
+    let levels = [];
+    // 可视化步骤：每一步包含 { boardBefore, path, score, levelIdx, stepInLevel, level }
+    let visualSteps = [];
+    let currentIdx = 0;
+    let isPlaying = false;
+    let playTimer = null;
+    let currentSpeed = 1.0;
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const json = JSON.parse(ev.target.result);
+          if (!json.levels) throw new Error('缺少 levels');
+          gameData = json;
+          levels = json.levels;
+          buildVisualSteps();
+          seedDisplay.innerHTML = `种子：<strong>${json.seed || '—'}</strong>`;
+          currentIdx = 0;
+          stopPlay();
+          render();
+        } catch (err) { alert('解析失败：' + err.message); }
+      };
+      reader.readAsText(file);
+    });
+
+    function buildVisualSteps() {
+      visualSteps = [];
+      levels.forEach((level, levelIdx) => {
+        const steps = level.steps || [];
+        // 第0步：初始棋盘，路径为空
+        if (steps.length > 0) {
+          visualSteps.push({
+            boardBefore: steps[0].board,
+            path: [],
+            score: 0,
+            stepInLevel: 0,
+            levelIdx,
+            level
+          });
+        }
+        // 后续步骤：使用前一步的board作为boardBefore，当前步的path
+        for (let i = 1; i < steps.length; i++) {
+          const prevBoard = steps[i-1].board;
+          visualSteps.push({
+            boardBefore: prevBoard,
+            path: steps[i].path || [],
+            score: steps[i].score || 0,
+            stepInLevel: i,
+            levelIdx,
+            level
+          });
+        }
+      });
+    }
+
+    function getCurrentVisual() {
+      if (visualSteps.length === 0) return null;
+      if (currentIdx < 0) currentIdx = 0;
+      if (currentIdx >= visualSteps.length) currentIdx = visualSteps.length - 1;
+      return visualSteps[currentIdx];
+    }
+
+    // 计算到当前步为止的关卡内累计得分和全局累计得分
+    function computeCumulativeScores() {
+      let globalCum = 0;
+      let levelCum = 0;
+      for (let i = 0; i <= currentIdx && i < visualSteps.length; i++) {
+        const vs = visualSteps[i];
+        if (i > 0 && visualSteps[i].levelIdx !== visualSteps[i-1].levelIdx) {
+          levelCum = 0; // 切换关卡
+        }
+        levelCum += vs.score;
+        globalCum += vs.score;
+      }
+      return { levelCum, globalCum };
+    }
+
+    function render() {
+      const vs = getCurrentVisual();
+      if (!vs) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      const board = vs.boardBefore;
+      const path = vs.path;
+      const N = board.length;
+      const container = document.getElementById('boardContainer');
+      const maxSize = Math.min(container.clientWidth - 40, 560);
+      const cellSize = Math.floor(maxSize / N);
+      const canvasSize = cellSize * N;
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
+
+      ctx.fillStyle = COLORS.gridBg;
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+      ctx.strokeStyle = '#2e3548';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= N; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0); ctx.lineTo(i * cellSize, canvasSize); ctx.stroke();
+        ctx.moveTo(0, i * cellSize); ctx.lineTo(canvasSize, i * cellSize); ctx.stroke();
+      }
+
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const val = board[r][c];
+          const absVal = Math.abs(val);
+          const x = c * cellSize, y = r * cellSize;
+          if (val === 0) {
+            const grad = ctx.createLinearGradient(x, y, x+cellSize, y+cellSize);
+            grad.addColorStop(0, '#ff6b6b'); grad.addColorStop(0.3, '#ffd93d');
+            grad.addColorStop(0.6, '#6bcb77'); grad.addColorStop(1, '#4d96ff');
+            ctx.fillStyle = grad;
+          } else {
+            ctx.fillStyle = COLORS[absVal] || '#888';
+          }
+          ctx.fillRect(x+1, y+1, cellSize-2, cellSize-2);
+
+          if (val < 0) {
+            ctx.strokeStyle = COLORS.bombBorder;
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(x+2, y+2, cellSize-4, cellSize-4);
+            ctx.font = `${Math.max(10, cellSize*0.4)}px "Segoe UI"`;
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'black'; ctx.shadowBlur = 3;
+            ctx.fillText('💣', x+cellSize*0.15, y+cellSize*0.75);
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+          } else if (val === 0) {
+            ctx.font = `bold ${Math.max(10, cellSize*0.4)}px "Segoe UI"`;
+            ctx.fillStyle = '#333';
+            ctx.fillText('0', x+cellSize*0.3, y+cellSize*0.7);
+          } else {
+            ctx.font = `bold ${Math.max(10, cellSize*0.38)}px "Segoe UI"`;
+            ctx.fillStyle = '#ffffffdd';
+            ctx.fillText(absVal.toString(), x+cellSize*0.35, y+cellSize*0.7);
+          }
+        }
+      }
+
+      if (path.length >= 2) {
+        ctx.beginPath();
+        ctx.strokeStyle = COLORS.pathStroke;
+        ctx.lineWidth = Math.max(3, cellSize*0.25);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#f0b340aa'; ctx.shadowBlur = 8;
+        for (let i = 0; i < path.length; i++) {
+          const [r, c] = path[i];
+          const px = c * cellSize + cellSize/2, py = r * cellSize + cellSize/2;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // 更新面板
+      const { levelCum, globalCum } = computeCumulativeScores();
+      levelDisplay.textContent = `第 ${vs.level.level || (vs.levelIdx+1)} 关`;
+      stepDisplay.textContent = vs.stepInLevel;
+      stepScoreDisplay.textContent = vs.score;
+      levelCumulativeDisplay.textContent = levelCum;
+      globalCumulativeDisplay.textContent = globalCum;
+      progressText.textContent = `${currentIdx+1} / ${visualSteps.length}`;
+    }
+
+    function goTo(idx) {
+      if (visualSteps.length === 0) return;
+      if (idx < 0) idx = 0;
+      if (idx >= visualSteps.length) idx = visualSteps.length - 1;
+      if (currentIdx !== idx) {
+        currentIdx = idx;
+        render();
+      }
+    }
+
+    function prev() { stopPlay(); goTo(currentIdx - 1); }
+    function next() { stopPlay(); goTo(currentIdx + 1); }
+
+    function startPlay() {
+      if (visualSteps.length === 0) return;
+      if (currentIdx >= visualSteps.length - 1) currentIdx = 0;
+      isPlaying = true;
+      playBtn.classList.add('active');
+      pauseBtn.classList.remove('disabled');
+      scheduleNext();
+    }
+
+    function stopPlay() {
+      isPlaying = false;
+      playBtn.classList.remove('active');
+      pauseBtn.classList.add('disabled');
+      if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+    }
+
+    function scheduleNext() {
+      if (!isPlaying) return;
+      const interval = 700 / currentSpeed;
+      playTimer = setTimeout(() => {
+        if (!isPlaying) return;
+        if (currentIdx < visualSteps.length - 1) {
+          goTo(currentIdx + 1);
+          scheduleNext();
+        } else stopPlay();
+      }, interval);
+    }
+
+    playBtn.addEventListener('click', () => isPlaying ? stopPlay() : startPlay());
+    pauseBtn.addEventListener('click', stopPlay);
+    prevBtn.addEventListener('click', prev);
+    nextBtn.addEventListener('click', next);
+    speedSlider.addEventListener('input', () => {
+      currentSpeed = parseFloat(speedSlider.value);
+      speedValue.textContent = currentSpeed.toFixed(1) + 'x';
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+      else if (e.key === ' ') { e.preventDefault(); isPlaying ? stopPlay() : startPlay(); }
+    });
+
+    window.addEventListener('resize', render);
+    render();
+  })();
+</script>
+</body>
+</html>
