@@ -16,17 +16,20 @@ import shutil
 from pathlib import Path
 
 # ---------- 配置 ----------
-CPP_SOURCE = "local_judge.cpp"      # 测评机源码文件名
-OUTPUT_BIN = "local_judge"          # 输出的可执行文件名（Windows 会自动加 .exe）
-HTML_FILE = "visualizer.html"       # 可视化页面文件名
-JSON_LOG = "game_log.json"          # 生成的日志文件名
+CPP_SOURCE = "local_judge.cpp"  # 测评机源码文件名
+OUTPUT_BIN = "local_judge"  # 输出的可执行文件名（Windows 会自动加 .exe）
+HTML_FILE = "visualizer.html"  # 可视化页面文件名
+JSON_LOG = "game_log.json"  # 生成的日志文件名
+
 
 # ---------- 工具函数 ----------
 def is_windows():
     return platform.system() == "Windows"
 
+
 def is_macos():
     return platform.system() == "Darwin"
+
 
 def get_compiler():
     """根据平台返回编译器命令和标准库选项"""
@@ -50,6 +53,7 @@ def get_compiler():
             print("❌ 未找到 g++，请安装 build-essential。")
             sys.exit(1)
 
+
 def compile_source(compiler, flags):
     """编译 C++ 源码"""
     source_path = Path(CPP_SOURCE)
@@ -71,6 +75,7 @@ def compile_source(compiler, flags):
     print("✅ 编译成功。")
     return out_name
 
+
 def run_executable(executable):
     """运行测评机，打印输出并生成 JSON"""
     exe_path = Path(executable)
@@ -88,15 +93,16 @@ def run_executable(executable):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1
+        bufsize=1,
     )
     for line in process.stdout:
-        print(line, end='')
+        print(line, end="")
     process.wait()
     if process.returncode != 0:
         print(f"❌ 测评机运行出错，返回码 {process.returncode}")
         sys.exit(1)
     print("✅ 测评完成，已生成 game_log.json")
+
 
 def open_html():
     """用默认浏览器打开可视化页面"""
@@ -106,6 +112,7 @@ def open_html():
         return
     print(f"🌐 打开可视化页面: {html_path}")
     webbrowser.open(f"file://{html_path}")
+
 
 # ---------- 主流程 ----------
 def main():
@@ -134,6 +141,7 @@ def main():
     open_html()
 
     print("\n🎉 全部完成！在浏览器中手动导入 game_log.json 即可开始分析。")
+
 
 if __name__ == "__main__":
     main()
