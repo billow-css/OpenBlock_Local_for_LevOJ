@@ -2,7 +2,6 @@
 #error "C++17 required"
 #endif
 
-#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <fstream> // 用于文件输出
