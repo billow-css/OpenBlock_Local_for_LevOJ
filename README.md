@@ -16,7 +16,12 @@
 ```plaintext
 OpenBlock_Local_for_LevOJ/
 ├── run.py          # 自动化脚本
-├── local_judge.cpp # 本地测评机与 AI 函数
+├── asset.hpp       # 游戏资产
+├── engine.hpp      # 随机数生成器
+├── localenv.hpp    # 一堆include
+├── ai.hpp          # AI 函数（用户需编写）
+├── tools.hpp       # 工具函数
+├── local_judge.cpp # 本地测评机
 └── visualizer.html # 可视化播放器
 ```
 
@@ -26,9 +31,18 @@ OpenBlock_Local_for_LevOJ/
    ```bash
    git clone https://github.com/billow-css/OpenBlock_Local_for_LevOJ.git
    ```
-2. 将你的 `find_best_path` 函数粘贴到 `local_judge.cpp Line 170 - 200`(附近) 中
+2. 对于解题逻辑的导入：我们**非常荣幸**的向您宣告，您现在只需要修改`ai.hpp`即可！为了您**宝贵的**用户体验，文件格式简单到令人发指！！
    ```cpp
-   std::vector<std::pair<int, int>> find_best_path(const Board &board);
+   #pragma once
+
+   #include "locenv.hpp"
+   typedef std::vector<std::pair<int,int>> ans;
+
+   /*相关辅助函数*/
+
+   ans find_best_path(const Board &board){
+      /*code*/
+      }
    ```
 3. - 如果你的环境包含Python，运行
 
